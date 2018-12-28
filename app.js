@@ -70,7 +70,23 @@ var budgetController = (function () {
             data.budget = data.totals.income - data.totals.expense;
 
             // Calculate percentage of income and expense
-            data.percentage = Math.round((data.totals.expense / data.totals.income) *100);
+            if (data.totals.income > 0) {
+                data.percentage = Math.round((data.totals.expense / data.totals.income) * 100);
+            }
+        },
+
+        deleteItem: function(type, id) {
+            var ids, index;
+
+            ids = data.allItems[type].map(function (current) {
+                return current.id;
+            });
+
+            index = ids.indexOf(id);
+
+            if (index !== -1) {
+                data.allItems[type].splice(index, 1);
+            }
         },
 
         getBudget: function() {
@@ -88,6 +104,8 @@ var budgetController = (function () {
     }
 })();
 
+
+
 // UIController Section
 var UIController = (function () {
 
@@ -97,7 +115,12 @@ var UIController = (function () {
         inputValue: '.add__value',
         inputBtn: '.add__btn',
         incomeContainer: '.income__list',
-        expenseContainer: '.expenses__list'
+        expenseContainer: '.expenses__list',
+        budgetLabel: '.budget__value',
+        incomeLabel: '.budget__income--value',
+        expenseLabel: '.budget__expenses--value',
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     };
 
     return {
@@ -130,6 +153,11 @@ var UIController = (function () {
             document.querySelector(element).insertAdjacentHTML('beforeend', newHtml);
         },
 
+        deleteListItem: function (selectorId) {
+            var el = document.getElementById(selectorId);
+            el.parentNode.removeChild(el);
+        },
+
         clearInputField: function() {
             var fields, fieldArr;
 
@@ -142,6 +170,18 @@ var UIController = (function () {
             });
 
             fieldArr[0].focus();
+        },
+
+        displayBudget: function(obj) {
+            document.querySelector(DOMString.budgetLabel).textContent = obj.budget;
+            document.querySelector(DOMString.incomeLabel).textContent = obj.totalIncome;
+            document.querySelector(DOMString.expenseLabel).textContent = obj.totalExpense;
+
+            if (obj.percentage > 0) {
+                document.querySelector(DOMString.percentageLabel).textContent = obj.percentage + '%';
+            } else {
+                document.querySelector(DOMString.percentageLabel).textContent = '---';
+            }
         },
 
         getDOMString: function () {
@@ -165,6 +205,8 @@ var controller = (function (budgetCtrl, UICtrl) {
             }
 
         });
+        
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
     };
 
     var updateBudget = function () {
@@ -174,8 +216,8 @@ var controller = (function (budgetCtrl, UICtrl) {
         // Get individual calculations
         var budget = budgetCtrl.getBudget();
 
-        // Update the UI
-        console.log(budget);
+        // Update budget in the UI
+        UICtrl.displayBudget(budget);
     };
 
     var ctrlAddItem = function() {
@@ -198,10 +240,39 @@ var controller = (function (budgetCtrl, UICtrl) {
             updateBudget();
         }
     };
+    
+    var ctrlDeleteItem = function (event) {
+        var itemId, splitId, type, ID;
+
+        itemId = event.target.parentNode.parentNode.parentNode.parentNode.id;
+
+        if (itemId) {
+            splitId = itemId.split('-');
+
+            type = splitId[0];
+            ID = parseInt(splitId[1]);
+
+            // 1. Delete item from data structure
+            budgetCtrl.deleteItem(type, ID);
+
+            // 2. Update item in the UI
+            UICtrl.deleteListItem(itemId);
+
+            // 3. Update the new budget
+            updateBudget();
+
+        }
+    }
 
     return {
         init: function () {
             console.log('Wow');
+            UICtrl.displayBudget({
+                budget: 0,
+                totalIncome: 0,
+                totalExpense: 0,
+                percentage: 0
+            });
             setupEventListeners();
         }
     };
